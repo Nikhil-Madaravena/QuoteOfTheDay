@@ -190,6 +190,15 @@ Qelio uses an intentional, award-winning monochromatic palette with a single gol
 
 ---
 
+## Contributors
+
+| Name | Role |
+|---|---|
+| **Nikhil Madaravena** | Full Stack · Flutter & Backend |
+| **Lalith Prakash** | Backend · Node.js, API & AI Service (Gemini) |
+
+---
+
 ## License
 
 MIT © Nikhil Madaravena
