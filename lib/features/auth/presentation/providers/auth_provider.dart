@@ -4,7 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../domain/models/user_model.dart';
-import '../../../questionnaire/presentation/providers/preference_provider.dart';
+import '../../../../core/providers/shared_preferences_provider.dart';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 

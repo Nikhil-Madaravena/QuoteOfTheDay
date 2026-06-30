@@ -50,7 +50,7 @@ class _SkeletonLoaderState extends State<SkeletonLoader>
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.08 * _animation.value + 0.04),
+            color: color.withValues(alpha: 0.08 * _animation.value + 0.04),
             borderRadius: BorderRadius.circular(widget.borderRadius),
           ),
         );
@@ -72,7 +72,7 @@ class QuoteCardSkeleton extends StatelessWidget {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withOpacity(0.08),
+            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.08),
             blurRadius: 24,
             offset: const Offset(0, 12),
           )

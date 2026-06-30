@@ -12,11 +12,11 @@ final dioProvider = Provider<Dio>((ref) {
   );
 
   dio.interceptors.add(LogInterceptor(
-    request: true,
-    requestHeader: true,
-    requestBody: true,
-    responseHeader: true,
-    responseBody: true,
+    request: false,
+    requestHeader: false,
+    requestBody: false,
+    responseHeader: false,
+    responseBody: false,
     error: true,
   ));
 

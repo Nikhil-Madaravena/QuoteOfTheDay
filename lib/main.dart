@@ -7,7 +7,7 @@ import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 import 'core/routing/app_router.dart';
 import 'core/services/notification_service.dart';
-import 'features/questionnaire/presentation/providers/preference_provider.dart';
+import 'core/providers/shared_preferences_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,8 +15,8 @@ void main() async {
   // Initialize SharedPreferences
   final sharedPreferences = await SharedPreferences.getInstance();
 
-  // Notifications are only supported on Android/iOS — skip on desktop
-  if (Platform.isAndroid || Platform.isIOS) {
+  // Notifications are only supported on Android/iOS/macOS — skip on Linux/Windows
+  if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
     // Initialize Notification Service (timezone + plugin setup)
     await NotificationService().init();
 
@@ -53,7 +53,7 @@ class QODApp extends ConsumerWidget {
       title: AppConstants.appName,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

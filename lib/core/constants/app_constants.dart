@@ -1,7 +1,7 @@
 import 'dart:io';
 
 class AppConstants {
-  static const String appName = 'Quote of the Day';
+  static const String appName = 'Qelio';
   
   // Dynamically resolve localhost depending on the platform (10.0.2.2 for Android emulator)
   static String get baseUrl {
@@ -9,9 +9,9 @@ class AppConstants {
       return const String.fromEnvironment('API_URL');
     }
     if (Platform.isAndroid) {
-      return 'http://10.0.2.2:5000';
+      return 'http://10.0.2.2:3000';
     }
-    return 'http://127.0.0.1:5000';
+    return 'http://127.0.0.1:3000';
   }
   
   // SharedPreferences Keys

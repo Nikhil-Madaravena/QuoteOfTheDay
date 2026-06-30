@@ -8,16 +8,16 @@ class AppTheme {
 
   // Ultra-minimalist sharp or very subtle curves.
   static final _shape = RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(0),
+    borderRadius: BorderRadius.circular(12),
   );
   
   static final _inputBorder = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(0),
+    borderRadius: BorderRadius.circular(12),
     borderSide: const BorderSide(color: AppColors.borderLight, width: 1),
   );
   
   static final _inputBorderDark = OutlineInputBorder(
-    borderRadius: BorderRadius.circular(0),
+    borderRadius: BorderRadius.circular(12),
     borderSide: const BorderSide(color: AppColors.borderDark, width: 1),
   );
 
@@ -113,9 +113,9 @@ class AppTheme {
   // ── Dark Theme ───────────────────────────────────────────────────────────
   static ThemeData get darkTheme {
     const cs = ColorScheme.dark(
-      primary: AppColors.white,
+      primary: AppColors.accentGold,
       onPrimary: AppColors.black,
-      secondary: AppColors.grey200,
+      secondary: AppColors.darkOnSurfaceVariant,
       onSecondary: AppColors.black,
       error: AppColors.errorDark,
       onError: AppColors.black,
@@ -144,45 +144,48 @@ class AppTheme {
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.darkBackground,
         foregroundColor: AppColors.darkOnSurface,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleTextStyle: AppTypography.playfair(
-          fontSize: 20,
+        titleTextStyle: AppTypography.dmSans(
+          fontSize: 11,
           fontWeight: FontWeight.w700,
+          letterSpacing: 3.0,
           color: AppColors.darkOnSurface,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: AppColors.accentGold,
+          foregroundColor: AppColors.black,
           shape: _shape,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-          textStyle: AppTypography.dmSans(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 1.0),
+          textStyle: AppTypography.dmSans(fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.5),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: AppColors.darkOnSurface,
-          textStyle: AppTypography.dmSans(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.5),
+          foregroundColor: AppColors.accentGold,
+          textStyle: AppTypography.dmSans(fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.5),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         border: _inputBorderDark,
         enabledBorder: _inputBorderDark,
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(0),
-          borderSide: const BorderSide(color: AppColors.white, width: 1.5),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.accentGold, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(0),
+          borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.errorDark, width: 1),
         ),
         filled: true,
-        fillColor: AppColors.darkBackground,
+        fillColor: AppColors.darkSurfaceVariant,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-        labelStyle: AppTypography.dmSans(color: AppColors.darkOnSurfaceVariant, fontSize: 14),
-        hintStyle: AppTypography.dmSans(color: AppColors.darkOnSurfaceVariant, fontSize: 14),
+        labelStyle: AppTypography.dmSans(color: AppColors.darkOnSurfaceVariant, fontSize: 13),
+        hintStyle: AppTypography.dmSans(color: AppColors.darkOnSurfaceVariant, fontSize: 13),
         prefixIconColor: AppColors.darkOnSurfaceVariant,
       ),
       dividerTheme: const DividerThemeData(
@@ -196,8 +199,8 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: _shape,
-        backgroundColor: AppColors.darkSurface,
-        contentTextStyle: AppTypography.dmSans(color: AppColors.darkOnSurface, fontSize: 14),
+        backgroundColor: AppColors.darkSurfaceVariant,
+        contentTextStyle: AppTypography.dmSans(color: AppColors.darkOnSurface, fontSize: 13),
       ),
     );
   }

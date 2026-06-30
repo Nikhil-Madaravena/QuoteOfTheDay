@@ -154,39 +154,24 @@ class _FavoriteCard extends ConsumerWidget {
                 height: 1.5,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Expanded(
-                  child: Text(
-                    '— ${quote.author}',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: cs.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.share_outlined),
+                  iconSize: 20,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => Share.share(
+                      '"${quote.quote}"\n\n#QuoteOfTheDay'),
                 ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.share_outlined),
-                      iconSize: 20,
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => Share.share(
-                          '"${quote.quote}"\n— ${quote.author}\n\n#QuoteOfTheDay'),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.favorite_rounded, color: cs.error),
-                      iconSize: 20,
-                      visualDensity: VisualDensity.compact,
-                      onPressed: () => ref
-                          .read(quoteProvider.notifier)
-                          .toggleFavorite(quote),
-                    ),
-                  ],
+                IconButton(
+                  icon: Icon(Icons.favorite_rounded, color: cs.error),
+                  iconSize: 20,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => ref
+                      .read(quoteProvider.notifier)
+                      .toggleFavorite(quote),
                 ),
               ],
             ),

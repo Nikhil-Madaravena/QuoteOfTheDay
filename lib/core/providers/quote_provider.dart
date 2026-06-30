@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:dio/dio.dart';
-import '../../features/questionnaire/presentation/providers/preference_provider.dart';
+import 'shared_preferences_provider.dart';
 import '../constants/app_constants.dart';
 import '../network/dio_client.dart';
 import '../models/quote_model.dart';
@@ -60,9 +60,16 @@ class QuoteNotifier extends StateNotifier<QuoteState> {
   static const _cachedFavoritesKey = 'cached_favorites';
   static const _streakKey = 'streak_count';
   static const _streakDateKey = 'streak_date';
+  static const _milestoneKey = 'streak_milestone_pending';
+  static const _milestoneShownPrefix = 'milestone_shown_';
+
+  static const _milestones = [3, 7, 14, 30, 100];
 
   QuoteNotifier(this._dio, this._prefs) : super(const QuoteState()) {
     _loadFromCache();
+    _updateStreak();
+    // Fetch and sync the streak from backend
+    loadStreak();
   }
 
   void _attachToken() {
@@ -85,6 +92,30 @@ class QuoteNotifier extends StateNotifier<QuoteState> {
     );
   }
 
+  Future<void> loadStreak() async {
+    try {
+      _attachToken();
+      final response = await _dio.get('/api/quotes/streak');
+      final streakVal = response.data['currentStreak'] as int? ?? 0;
+      await _prefs.setInt(_streakKey, streakVal);
+      // Run milestone checks
+      _checkMilestonesForStreak(streakVal);
+      state = state.copyWith(); // triggers provider listener updates
+    } catch (_) {
+      // Keep local streak
+    }
+  }
+
+  void _checkMilestonesForStreak(int streakVal) {
+    for (final m in _milestones) {
+      final shownKey = '$_milestoneShownPrefix$m';
+      if (streakVal == m && !(_prefs.getBool(shownKey) ?? false)) {
+        _prefs.setInt(_milestoneKey, m);
+        break;
+      }
+    }
+  }
+
   Future<void> loadDailyQuote() async {
     state = state.copyWith(isLoading: state.quote == null, isRefreshing: state.quote != null, clearError: true);
     try {
@@ -92,8 +123,29 @@ class QuoteNotifier extends StateNotifier<QuoteState> {
       final response = await _dio.get('/api/quotes/daily');
       final quote = QuoteModel.fromJson(response.data);
       await _prefs.setString(_cachedQuoteKey, quote.toJsonString());
-      _updateStreak();
-      state = state.copyWith(quote: quote, isLoading: false, isRefreshing: false, isOffline: false);
+      
+      // Update history list with the retrieved daily quote
+      final currentHistory = List<QuoteModel>.from(state.history);
+      if (!currentHistory.any((q) => q.id == quote.id || q.quote == quote.quote)) {
+        currentHistory.insert(0, quote);
+        await _prefs.setStringList(
+            _cachedHistoryKey, currentHistory.map((q) => q.toJsonString()).toList());
+      }
+
+      // Sync streak from response if returned
+      if (response.data['streak'] != null) {
+        final streakVal = response.data['streak'] as int;
+        await _prefs.setInt(_streakKey, streakVal);
+        _checkMilestonesForStreak(streakVal);
+      }
+
+      state = state.copyWith(
+        quote: quote,
+        history: currentHistory,
+        isLoading: false,
+        isRefreshing: false,
+        isOffline: false,
+      );
     } on DioException catch (e) {
       final isNetwork = e.type == DioExceptionType.connectionError ||
           e.type == DioExceptionType.unknown;
@@ -107,14 +159,41 @@ class QuoteNotifier extends StateNotifier<QuoteState> {
   }
 
   Future<void> regenerateQuote() async {
-    if (state.quote?.hasRegenerated == true) return;
+    if (state.quote != null &&
+        _isSameDay(state.quote!.date, DateTime.now()) &&
+        state.quote!.hasRegenerated) {
+      return;
+    }
     state = state.copyWith(isRefreshing: true, clearError: true);
     try {
       _attachToken();
       final response = await _dio.post('/api/quotes/regenerate');
       final quote = QuoteModel.fromJson(response.data);
       await _prefs.setString(_cachedQuoteKey, quote.toJsonString());
-      state = state.copyWith(quote: quote, isRefreshing: false);
+
+      // Update history by replacing today's daily quote with the regenerated one
+      final currentHistory = List<QuoteModel>.from(state.history);
+      final todayIndex = currentHistory.indexWhere((q) => _isSameDay(q.date, DateTime.now()));
+      if (todayIndex != -1) {
+        currentHistory[todayIndex] = quote;
+      } else {
+        currentHistory.insert(0, quote);
+      }
+      await _prefs.setStringList(
+          _cachedHistoryKey, currentHistory.map((q) => q.toJsonString()).toList());
+
+      // Sync streak from response if returned
+      if (response.data['streak'] != null) {
+        final streakVal = response.data['streak'] as int;
+        await _prefs.setInt(_streakKey, streakVal);
+        _checkMilestonesForStreak(streakVal);
+      }
+
+      state = state.copyWith(
+        quote: quote,
+        history: currentHistory,
+        isRefreshing: false,
+      );
     } on DioException catch (e) {
       state = state.copyWith(isRefreshing: false, error: e.message);
     }
@@ -164,7 +243,6 @@ class QuoteNotifier extends StateNotifier<QuoteState> {
       _attachToken();
       await _dio.post('/api/quotes/favorites', data: {
         'quoteText': quote.quote,
-        'author': quote.author,
         'topic': quote.category,
       });
     } catch (_) {}
@@ -178,7 +256,6 @@ class QuoteNotifier extends StateNotifier<QuoteState> {
   Future<void> _removeFavorite(QuoteModel quote) async {
     try {
       _attachToken();
-      // Need to find the actual favorite ID, as the passed quote might be a DailyQuote ID
       final favToRemove = state.favorites.firstWhere(
         (f) => f.id == quote.id || f.quote == quote.quote,
         orElse: () => quote,
@@ -222,7 +299,24 @@ class QuoteNotifier extends StateNotifier<QuoteState> {
       _prefs.setInt(_streakKey, 1);
     }
     _prefs.setString(_streakDateKey, todayDate.toIso8601String());
+
+    // Check if we just hit a milestone
+    final newStreak = _prefs.getInt(_streakKey) ?? 1;
+    _checkMilestonesForStreak(newStreak);
   }
+
+  /// Returns the pending milestone value (if any) and marks it as shown.
+  int? checkAndClearMilestone() {
+    final milestone = _prefs.getInt(_milestoneKey);
+    if (milestone != null) {
+      _prefs.remove(_milestoneKey);
+      _prefs.setBool('$_milestoneShownPrefix$milestone', true);
+    }
+    return milestone;
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   int get currentStreak => _prefs.getInt(_streakKey) ?? 0;
 }
@@ -238,4 +332,9 @@ final quoteProvider = StateNotifierProvider<QuoteNotifier, QuoteState>((ref) {
 final streakProvider = Provider<int>((ref) {
   final notifier = ref.watch(quoteProvider.notifier);
   return notifier.currentStreak;
+});
+
+final streakMilestoneProvider = Provider<int?>((ref) {
+  final notifier = ref.watch(quoteProvider.notifier);
+  return notifier.checkAndClearMilestone();
 });

@@ -1,12 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../domain/entities/preference_entity.dart';
 import '../../data/repositories/preference_repository_impl.dart';
 
-final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
-  throw UnimplementedError('SharedPreferences must be overridden in ProviderScope');
-});
+import '../../../../core/providers/shared_preferences_provider.dart';
 
 final preferenceRepositoryProvider = Provider<PreferenceRepositoryImpl>((ref) {
   final dio = ref.watch(dioProvider);

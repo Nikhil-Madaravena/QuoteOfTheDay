@@ -18,8 +18,9 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
-    // Linux desktop does not support flutter_local_notifications — skip.
-    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) return;
+    // Linux/Windows do not support flutter_local_notifications — skip.
+    // (macOS uses the Darwin settings below and is supported.)
+    if (Platform.isLinux || Platform.isWindows) return;
 
     // Initialize timezone database
     tz.initializeTimeZones();
@@ -58,7 +59,7 @@ class NotificationService {
   /// Request platform-specific notification permissions.
   /// Returns true if permission granted.
   Future<bool> requestPermissions() async {
-    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) return false;
+    if (Platform.isLinux || Platform.isWindows) return false;
 
     // Android 13+ explicit permission request
     final AndroidFlutterLocalNotificationsPlugin? androidPlugin = _plugin
@@ -92,7 +93,7 @@ class NotificationService {
     required int hour,
     required int minute,
   }) async {
-    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) return;
+    if (Platform.isLinux || Platform.isWindows) return;
 
     // Cancel any existing notification first
     await cancelDailyNotification();
@@ -130,13 +131,13 @@ class NotificationService {
 
   /// Cancel the scheduled daily notification.
   Future<void> cancelDailyNotification() async {
-    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) return;
+    if (Platform.isLinux || Platform.isWindows) return;
     await _plugin.cancel(_dailyQuoteNotificationId);
   }
 
   /// Cancel all notifications.
   Future<void> cancelAll() async {
-    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) return;
+    if (Platform.isLinux || Platform.isWindows) return;
     await _plugin.cancelAll();
   }
 
@@ -201,7 +202,7 @@ class NotificationService {
 
   /// Check if notification permissions are granted.
   Future<bool> areNotificationsEnabled() async {
-    if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) return false;
+    if (Platform.isLinux || Platform.isWindows) return false;
 
     final AndroidFlutterLocalNotificationsPlugin? androidPlugin = _plugin
         .resolvePlatformSpecificImplementation<

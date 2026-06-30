@@ -3,6 +3,63 @@ const Preference = require('../models/Preference');
 const DailyQuote = require('../models/DailyQuote');
 const FavoriteQuote = require('../models/FavoriteQuote');
 const QuotePool = require('../models/QuotePool');
+const Streak = require('../models/Streak');
+
+const getOrCreateStreak = async (userId) => {
+  let streak = await Streak.findOne({ user: userId });
+  if (!streak) {
+    streak = await Streak.create({
+      user: userId,
+      currentStreak: 0,
+      longestStreak: 0,
+    });
+  }
+  return streak;
+};
+
+const updateStreak = async (userId) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let streak = await Streak.findOne({ user: userId });
+  if (!streak) {
+    streak = await Streak.create({
+      user: userId,
+      currentStreak: 1,
+      longestStreak: 1,
+      lastActiveDate: today,
+    });
+    return streak;
+  }
+
+  if (!streak.lastActiveDate) {
+    streak.currentStreak = 1;
+    streak.longestStreak = Math.max(streak.longestStreak, 1);
+    streak.lastActiveDate = today;
+    await streak.save();
+    return streak;
+  }
+
+  const lastActive = new Date(streak.lastActiveDate);
+  lastActive.setHours(0, 0, 0, 0);
+
+  const diffTime = Math.abs(today - lastActive);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) {
+    return streak;
+  } else if (diffDays === 1) {
+    streak.currentStreak += 1;
+    streak.longestStreak = Math.max(streak.longestStreak, streak.currentStreak);
+  } else {
+    streak.currentStreak = 1;
+  }
+
+  streak.lastActiveDate = today;
+  await streak.save();
+  return streak;
+};
+
 
 // @desc    Get daily quote
 // @route   GET /api/quotes/daily
@@ -21,14 +78,15 @@ const getDailyQuote = async (req, res) => {
     });
 
     if (existingQuote) {
+      const streakRecord = await getOrCreateStreak(userId);
       return res.json({
         id: existingQuote._id,
         quote: existingQuote.quoteText,
-        author: existingQuote.author,
         category: existingQuote.topic,
         explanation: existingQuote.explanation || 'Retrieved from cache.',
         hasRegenerated: existingQuote.hasRegenerated,
         isCached: true,
+        streak: streakRecord.currentStreak,
       });
     }
 
@@ -55,7 +113,6 @@ const getDailyQuote = async (req, res) => {
       // Use the pooled quote
       generatedData = {
         quote: poolQuote.quoteText,
-        author: poolQuote.author,
         category: poolQuote.topic,
         explanation: poolQuote.explanation,
       };
@@ -71,7 +128,6 @@ const getDailyQuote = async (req, res) => {
       try {
         await QuotePool.create({
           quoteText: generatedData.quote,
-          author: generatedData.author || 'Unknown',
           topic: generatedData.category || (preferredTopics[0] || 'General'),
           explanation: generatedData.explanation || '',
           usedBy: [userId],
@@ -85,17 +141,19 @@ const getDailyQuote = async (req, res) => {
     const newQuote = await DailyQuote.create({
       user: userId,
       quoteText: generatedData.quote,
-      author: generatedData.author || 'Unknown',
       topic: generatedData.category || 'General',
       explanation: generatedData.explanation || '',
       date: new Date(),
     });
+
+    const streakRecord = await updateStreak(userId);
 
     res.status(201).json({
       id: newQuote._id,
       ...generatedData,
       hasRegenerated: false,
       isCached: false,
+      streak: streakRecord.currentStreak,
     });
 
   } catch (error) {
@@ -147,7 +205,6 @@ const regenerateQuote = async (req, res) => {
     if (poolQuote) {
       generatedData = {
         quote: poolQuote.quoteText,
-        author: poolQuote.author,
         category: poolQuote.topic,
         explanation: poolQuote.explanation,
       };
@@ -159,7 +216,6 @@ const regenerateQuote = async (req, res) => {
       try {
         await QuotePool.create({
           quoteText: generatedData.quote,
-          author: generatedData.author || 'Unknown',
           topic: generatedData.category || (preferredTopics[0] || 'General'),
           explanation: generatedData.explanation || '',
           usedBy: [userId],
@@ -169,18 +225,20 @@ const regenerateQuote = async (req, res) => {
 
     // Update the existing quote for today
     existingQuote.quoteText = generatedData.quote;
-    existingQuote.author = generatedData.author || 'Unknown';
     existingQuote.topic = generatedData.category || 'General';
     existingQuote.explanation = generatedData.explanation || '';
     existingQuote.hasRegenerated = true;
     
     await existingQuote.save();
 
+    const streakRecord = await getOrCreateStreak(userId);
+
     res.json({
       id: existingQuote._id,
       ...generatedData,
       hasRegenerated: true,
       isCached: false,
+      streak: streakRecord.currentStreak,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -255,6 +313,21 @@ const removeFavorite = async (req, res) => {
   }
 };
 
+// @desc    Get user's current streak
+// @route   GET /api/quotes/streak
+// @access  Private
+const getStreak = async (req, res) => {
+  try {
+    const streak = await Streak.findOne({ user: req.user._id });
+    res.json({
+      currentStreak: streak ? streak.currentStreak : 0,
+      longestStreak: streak ? streak.longestStreak : 0,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getDailyQuote,
   regenerateQuote,
@@ -262,4 +335,5 @@ module.exports = {
   addFavorite,
   getFavorites,
   removeFavorite,
+  getStreak,
 };

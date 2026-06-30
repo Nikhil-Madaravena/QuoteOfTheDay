@@ -6,6 +6,7 @@ const connectDB = require('./src/config/db');
 const authRoutes = require('./src/routes/authRoutes');
 const preferenceRoutes = require('./src/routes/preferenceRoutes');
 const quoteRoutes = require('./src/routes/quoteRoutes');
+const { apiLimiter } = require('./src/middleware/rateLimiter');
 
 const app = express();
 
@@ -15,6 +16,7 @@ connectDB();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use('/api', apiLimiter);
 
 // Routes
 app.use('/api/auth', authRoutes);

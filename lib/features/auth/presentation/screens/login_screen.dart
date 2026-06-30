@@ -88,35 +88,46 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Minimal Logo / Title
+                    // Wordmark
                     Text(
-                      'QUOTIDIAN',
-                      style: AppTypography.dmSans(
-                        fontSize: 14,
+                      'Q.',
+                      style: AppTypography.playfair(
+                        fontSize: 48,
                         fontWeight: FontWeight.w700,
-                        letterSpacing: 4.0,
-                        color: cs.onSurface,
+                        color: isDark ? AppColors.accentGold : cs.onSurface,
                       ),
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 64),
+                    const SizedBox(height: 8),
+                    Text(
+                      'QELIO',
+                      style: AppTypography.dmSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 5.0,
+                        color: isDark ? AppColors.darkOnSurfaceVariant : cs.onSurface,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 72),
                     
                     Text(
                       _isRegisterMode ? 'Create Account' : 'Welcome Back',
                       style: AppTypography.playfair(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
                         color: cs.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Text(
                       _isRegisterMode
                           ? 'Join to start building your collection.'
                           : 'Enter your details to continue.',
                       style: AppTypography.dmSans(
-                        fontSize: 14,
+                        fontSize: 12,
                         color: cs.onSurfaceVariant,
+                        height: 1.6,
                       ),
                     ),
                     const SizedBox(height: 48),
@@ -202,10 +213,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ? 'ALREADY HAVE AN ACCOUNT? SIGN IN'
                             : "DON'T HAVE AN ACCOUNT? SIGN UP",
                         style: AppTypography.dmSans(
-                          fontSize: 11,
+                          fontSize: 9,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 1.0,
+                          letterSpacing: 1.2,
+                          color: isDark ? AppColors.accentGold : cs.onSurface,
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   ],

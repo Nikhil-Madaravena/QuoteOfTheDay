@@ -10,20 +10,27 @@ const MODEL_CHAIN = [
 ];
 
 const buildPrompt = (preferences) => `
-You are an expert quote generator.
-Generate ONE completely original inspirational quote based on the following preferences:
-Goal: ${preferences.goal || 'General inspiration'}
-Tone: ${preferences.tone || 'Uplifting'}
-Topics: ${preferences.topics && preferences.topics.length > 0 ? preferences.topics.join(', ') : 'Life'}
-Preferred Length: ${preferences.quoteLength || 'medium'}
+You are an award-winning creative copywriter and a witty, unconventional life coach. 
+Your goal is to write ONE extraordinarily unique, creative, and memorable quote that someone would want to write on a sticky note, tweet, or print on a card.
+
+Goal: ${preferences.goal || 'General life advice'}
+Tone: ${preferences.tone || 'Fun and uplifting'}
+Topics: ${preferences.topics && preferences.topics.length > 0 ? preferences.topics.join(', ') : 'Everyday life'}
+Preferred Length: ${preferences.quoteLength || 'short'}
 Language: ${preferences.language || 'en'}
+
+Core Directives for Award-Winning Copy:
+1. NO CLICHES: Do not use common platitudes, fortune-cookie phrasing, or generic motivational setups ("Believe in yourself", "Every storm passes", etc.).
+2. METAPHORICAL & CONCRETE: Use surprising, vivid daily life metaphors (e.g., comparing productivity to a bad Wi-Fi connection, self-care to software updates, or confidence to a jacket that only fits when you stop trying to adjust it).
+3. WITTY & UNCONVENTIONAL: Add a pinch of healthy skepticism, playful self-deprecation, or a sudden perspective twist that makes the reader smile or think "Huh, that's incredibly true."
+4. HIGH IMPACT: Keep it punchy, rhythmic, and masterfully crafted. Every word must earn its place.
+5. NO AUTHOR: Do NOT include an author name — the quote must stand completely on its own.
 
 Return ONLY a valid JSON object in the following format, with NO markdown, NO backticks, NO extra text:
 {
   "quote": "The quote text here",
-  "author": "Author name (can be 'Unknown' or a relevant philosopher/thinker)",
-  "category": "The main topic",
-  "explanation": "A short 1-2 sentence explanation of why this quote is relevant"
+  "category": "The main topic (e.g. Motivation, Friendship, Humor, Growth, Self-care)",
+  "explanation": "A short, sharp, witty one-sentence application tip"
 }
 `.trim();
 
@@ -38,7 +45,7 @@ const tryModel = async (modelName, preferences) => {
 
   const parsed = JSON.parse(text);
 
-  if (!parsed.quote || !parsed.author || !parsed.category) {
+  if (!parsed.quote || !parsed.category) {
     throw new Error('Invalid response structure from Gemini');
   }
 
@@ -50,11 +57,10 @@ const generateQuote = async (preferences, modelIndex = 0, retries = 2) => {
     // All models exhausted — return a static fallback quote so the app doesn't crash
     console.warn('All Gemini models exhausted quota. Using static fallback quote.');
     return {
-      quote: 'Every day is a new beginning. Take a deep breath and start again.',
-      author: 'Unknown',
-      category: preferences.topics?.[0] || 'Inspiration',
+      quote: 'Done is better than perfect. Start messy, improve as you go.',
+      category: preferences.topics?.[0] || 'Motivation',
       explanation:
-        'A gentle reminder that each day offers a fresh opportunity to grow and improve.',
+        'Stop waiting for the perfect moment — just begin. Progress beats waiting every single time.',
       isFallback: true,
     };
   }

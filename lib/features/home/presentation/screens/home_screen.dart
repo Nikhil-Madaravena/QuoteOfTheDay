@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../../../core/routing/app_routes.dart';
 import '../../../../core/providers/quote_provider.dart';
+import '../../../../core/models/quote_model.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/skeleton_loader.dart';
@@ -33,6 +33,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(quoteProvider.notifier).loadDailyQuote();
+      // Check for a pending streak milestone to celebrate
+      final milestone = ref.read(streakMilestoneProvider);
+      if (milestone != null && mounted) {
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) _showMilestoneCelebration(milestone);
+        });
+      }
     });
   }
 
@@ -44,6 +51,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _animateIn() {
     _entranceCtrl.forward(from: 0);
+  }
+
+  void _showMilestoneCelebration(int days) {
+    HapticFeedback.heavyImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _MilestoneSheet(days: days),
+    );
   }
 
   @override
@@ -82,34 +99,45 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     const SizedBox(height: 12),
                   ],
 
-                  const Spacer(flex: 1),
-
-                  // ── Quote section ──────────────────────────────────────
-                  if (quoteState.isLoading)
-                    const QuoteCardSkeleton()
-                  else if (quoteState.quote != null)
-                    FadeTransition(
-                      opacity: _fadeAnim,
-                      child: SlideTransition(
-                        position: _slideAnim,
-                        child: _QuoteCard(
-                          quote: quoteState.quote!,
-                          isDark: isDark,
+                  // ── Quote section (Scrollable) ──────────────────────────
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(vertical: 24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (quoteState.isLoading)
+                              const QuoteCardSkeleton()
+                            else if (quoteState.quote != null)
+                              FadeTransition(
+                                opacity: _fadeAnim,
+                                child: SlideTransition(
+                                  position: _slideAnim,
+                                  child: _QuoteCard(
+                                    quote: quoteState.quote!,
+                                    isDark: isDark,
+                                  ),
+                                ),
+                              )
+                            else if (quoteState.error != null)
+                              _ErrorState(error: quoteState.error!, isDark: isDark)
+                            else
+                              _EmptyState(isDark: isDark),
+                          ],
                         ),
                       ),
-                    )
-                  else if (quoteState.error != null)
-                    _ErrorState(error: quoteState.error!, isDark: isDark)
-                  else
-                    _EmptyState(isDark: isDark),
+                    ),
+                  ),
 
-                  const Spacer(flex: 2),
+
 
                   // ── Action Bar ────────────────────────────────────────
                   if (quoteState.quote != null) ...[
                     _ActionBar(
                       isFavorite: isFav,
-                      onShare: _shareQuote,
+                      onCopy: _copyQuote,
                       onFavorite: () => ref
                           .read(quoteProvider.notifier)
                           .toggleFavorite(quoteState.quote!),
@@ -132,7 +160,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      title: Text('QUOTIDIAN',
+      title: Text('QELIO',
           style: AppTypography.dmSans(
               fontSize: 11, 
               fontWeight: FontWeight.w700, 
@@ -162,25 +190,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  Future<void> _shareQuote() async {
+  void _copyQuote() {
     final q = ref.read(quoteProvider).quote;
     if (q == null) return;
-    
-    final shareText = '"${q.quote}"\n\n— Quotidian';
-    
-    try {
-      await Share.share(shareText);
-    } catch (e) {
-      // Fallback to clipboard if the native share sheet fails or is unsupported
-      _fallbackShare(shareText);
-    }
-  }
-
-  void _fallbackShare(String text) {
+    final text = '"${q.quote}"';
     Clipboard.setData(ClipboardData(text: text));
+    HapticFeedback.lightImpact();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Copied to clipboard.')),
+        const SnackBar(
+          content: Text('COPIED TO CLIPBOARD'),
+          duration: Duration(seconds: 2),
+        ),
       );
     }
   }
@@ -188,7 +209,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 // ── Quote View ───────────────────────────────────────────────────────────────
 class _QuoteCard extends StatelessWidget {
-  final dynamic quote;
+  final QuoteModel quote;
   final bool isDark;
 
   const _QuoteCard({
@@ -198,15 +219,12 @@ class _QuoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
     return GestureDetector(
       onLongPress: () {
-        HapticFeedback.lightImpact();
+        HapticFeedback.mediumImpact();
         Clipboard.setData(ClipboardData(text: '"${quote.quote}"'));
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Copied.')),
+          const SnackBar(content: Text('COPIED TO CLIPBOARD')),
         );
       },
       child: Container(
@@ -214,47 +232,46 @@ class _QuoteCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Category
+            // Category label
             Text(
-              (quote.category as String).toUpperCase(),
+              quote.category.toUpperCase(),
               style: AppTypography.dmSans(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: isDark ? AppColors.grey500 : AppColors.grey400,
-                letterSpacing: 2.5,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.accentGold : AppColors.grey500,
+                letterSpacing: 3.0,
               ),
             ),
-            
-            const SizedBox(height: 32),
-            
+
+            const SizedBox(height: 28),
+
             // Quote body
             Text(
-              quote.quote as String,
+              '\u201C${quote.quote}\u201D',
               style: AppTypography.playfair(
-                fontSize: 28,
-                fontWeight: FontWeight.w600,
-                color: isDark ? AppColors.white : AppColors.black,
-                height: 1.5,
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.darkOnSurface : AppColors.black,
+                height: 1.65,
               ),
               textAlign: TextAlign.left,
             ),
-            
-            const SizedBox(height: 48),
 
             // Explanation / Insight
-            if ((quote.explanation as String).isNotEmpty) ...[
+            if (quote.explanation.isNotEmpty) ...[
+              const SizedBox(height: 40),
               Container(
-                width: 32,
+                width: double.infinity,
                 height: 1,
-                color: isDark ? AppColors.grey800 : AppColors.grey200,
+                color: isDark ? AppColors.borderDark : AppColors.grey200,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
               Text(
-                quote.explanation as String,
+                quote.explanation,
                 style: AppTypography.dmSans(
-                  fontSize: 13,
-                  height: 1.8,
-                  color: isDark ? AppColors.grey400 : AppColors.grey500,
+                  fontSize: 12,
+                  height: 1.9,
+                  color: isDark ? AppColors.darkOnSurfaceVariant : AppColors.grey500,
                 ),
               ),
             ],
@@ -268,7 +285,7 @@ class _QuoteCard extends StatelessWidget {
 // ── Action Bar ────────────────────────────────────────────────────────────────
 class _ActionBar extends StatelessWidget {
   final bool isFavorite;
-  final VoidCallback onShare;
+  final VoidCallback onCopy;
   final VoidCallback onFavorite;
   final VoidCallback onHistory;
   final bool isDark;
@@ -276,7 +293,7 @@ class _ActionBar extends StatelessWidget {
 
   const _ActionBar({
     required this.isFavorite,
-    required this.onShare,
+    required this.onCopy,
     required this.onFavorite,
     required this.onHistory,
     required this.isDark,
@@ -286,32 +303,34 @@ class _ActionBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      padding: const EdgeInsets.symmetric(vertical: 20),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: isDark ? AppColors.grey800 : AppColors.grey200,
+            color: isDark ? AppColors.borderDark : AppColors.grey200,
             width: 1,
           ),
         ),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _MinimalIcon(
-            icon: Icons.ios_share_rounded,
-            onTap: onShare,
+          _ActionButton(
+            icon: Icons.copy_rounded,
+            label: 'COPY',
+            onTap: onCopy,
             isDark: isDark,
           ),
-          _MinimalIcon(
-            icon: isFavorite
-                ? Icons.bookmark_rounded
-                : Icons.bookmark_border_rounded,
+          _ActionButton(
+            icon: isFavorite ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+            label: isFavorite ? 'SAVED' : 'SAVE',
             onTap: onFavorite,
             isDark: isDark,
+            isActive: isFavorite,
           ),
-          _MinimalIcon(
-            icon: Icons.view_carousel_outlined,
+          _ActionButton(
+            icon: Icons.access_time_rounded,
+            label: 'HISTORY',
             onTap: onHistory,
             isDark: isDark,
           ),
@@ -321,29 +340,47 @@ class _ActionBar extends StatelessWidget {
   }
 }
 
-class _MinimalIcon extends StatelessWidget {
+class _ActionButton extends StatelessWidget {
   final IconData icon;
+  final String label;
   final VoidCallback onTap;
   final bool isDark;
+  final bool isActive;
 
-  const _MinimalIcon({
+  const _ActionButton({
     required this.icon,
+    required this.label,
     required this.onTap,
     required this.isDark,
+    this.isActive = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final activeColor = isDark ? AppColors.accentGold : AppColors.black;
+    final inactiveColor = isDark ? AppColors.darkOnSurfaceVariant : AppColors.grey500;
+    final color = isActive ? activeColor : inactiveColor;
+
+    return GestureDetector(
       onTap: onTap,
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
+      behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Icon(
-          icon,
-          size: 22,
-          color: isDark ? AppColors.white : AppColors.black,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 20, color: isActive ? activeColor : (isDark ? AppColors.darkOnSurface : AppColors.black)),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: AppTypography.dmSans(
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+                color: color,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -414,6 +451,152 @@ class _EmptyState extends StatelessWidget {
               fontSize: 11,
               letterSpacing: 2.0,
               color: isDark ? AppColors.grey500 : AppColors.grey400)),
+    );
+  }
+}
+
+
+
+// ── Streak Milestone Celebration Sheet ───────────────────────────────────────
+class _MilestoneSheet extends StatelessWidget {
+  final int days;
+  const _MilestoneSheet({required this.days});
+
+  String get _emoji {
+    if (days >= 100) return '🏆';
+    if (days >= 30) return '🔥';
+    if (days >= 14) return '⚡';
+    if (days >= 7) return '🌟';
+    return '✨';
+  }
+
+  String get _title {
+    if (days >= 100) return 'LEGENDARY';
+    if (days >= 30) return 'ON FIRE';
+    if (days >= 14) return 'TWO WEEKS STRONG';
+    if (days >= 7) return 'ONE WEEK IN';
+    return 'GETTING STARTED';
+  }
+
+  String get _message {
+    if (days >= 100) return 'A hundred days of daily wisdom. That\'s not a habit — that\'s a lifestyle. You\'re absolutely unstoppable.';
+    if (days >= 30) return 'A full month of showing up every single day. Most people quit in week one. You didn\'t.';
+    if (days >= 14) return 'Two solid weeks of daily growth. You\'re building something real here. Keep going.';
+    if (days >= 7) return 'A whole week of daily reflection. The hardest part is starting — and you\'ve already done that.';
+    return 'Three days in and already building momentum. Every great habit starts exactly like this.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentGold.withValues(alpha: 0.2),
+            blurRadius: 40,
+            spreadRadius: 4,
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Gold gradient header bar
+          Container(
+            height: 5,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.accentGold, Color(0xFFFFF0A0), AppColors.accentGold],
+              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 32, 28, 28),
+            child: Column(
+              children: [
+                // Emoji
+                Text(_emoji, style: const TextStyle(fontSize: 64)),
+                const SizedBox(height: 16),
+
+                // Day count badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentGold.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppColors.accentGold.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    '$days DAY STREAK',
+                    style: AppTypography.dmSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 2.5,
+                      color: AppColors.accentGold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Title
+                Text(
+                  _title,
+                  style: AppTypography.dmSans(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.5,
+                    color: isDark ? AppColors.darkOnSurface : AppColors.black,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Message
+                Text(
+                  _message,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.dmSans(
+                    fontSize: 13,
+                    height: 1.7,
+                    color: isDark ? AppColors.darkOnSurfaceVariant : AppColors.grey500,
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // CTA button
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: TextButton.styleFrom(
+                      backgroundColor: AppColors.accentGold,
+                      foregroundColor: AppColors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      'KEEP IT UP',
+                      style: AppTypography.dmSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 2.0,
+                        color: AppColors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

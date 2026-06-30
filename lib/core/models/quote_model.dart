@@ -3,7 +3,7 @@ import 'dart:convert';
 class QuoteModel {
   final String id;
   final String quote;
-  final String author;
+  final String? author; // optional — new quotes don't include an author
   final String category;
   final String explanation;
   final DateTime date;
@@ -13,7 +13,7 @@ class QuoteModel {
   const QuoteModel({
     required this.id,
     required this.quote,
-    required this.author,
+    this.author,
     required this.category,
     required this.explanation,
     required this.date,
@@ -24,8 +24,8 @@ class QuoteModel {
   factory QuoteModel.fromJson(Map<String, dynamic> json) {
     return QuoteModel(
       id: json['id'] ?? json['_id'] ?? '',
-      quote: json['quote'] ?? '',
-      author: json['author'] ?? 'Unknown',
+      quote: json['quote'] ?? json['quoteText'] ?? '',
+      author: json['author'] as String?,
       category: json['category'] ?? json['topic'] ?? 'General',
       explanation: json['explanation'] ?? '',
       date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
@@ -34,16 +34,19 @@ class QuoteModel {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'quote': quote,
-        'author': author,
-        'category': category,
-        'explanation': explanation,
-        'date': date.toIso8601String(),
-        'hasRegenerated': hasRegenerated,
-        'isCached': isCached,
-      };
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'id': id,
+      'quote': quote,
+      'category': category,
+      'explanation': explanation,
+      'date': date.toIso8601String(),
+      'hasRegenerated': hasRegenerated,
+      'isCached': isCached,
+    };
+    if (author != null) map['author'] = author;
+    return map;
+  }
 
   String toJsonString() => jsonEncode(toJson());
 
@@ -72,3 +75,4 @@ class QuoteModel {
     );
   }
 }
+

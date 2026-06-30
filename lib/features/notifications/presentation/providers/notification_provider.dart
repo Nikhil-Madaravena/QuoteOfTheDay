@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/notification_service.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/providers/shared_preferences_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
@@ -89,7 +90,6 @@ class NotificationSettingsNotifier extends StateNotifier<NotificationSettingsSta
 final notificationSettingsProvider =
     StateNotifierProvider<NotificationSettingsNotifier, NotificationSettingsState>((ref) {
   final service = ref.watch(notificationServiceProvider);
-  // Access SharedPreferences from the provider already set up in main.dart
-  // We do this via a read from the ref
-  throw UnimplementedError('Override this in ProviderScope');
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return NotificationSettingsNotifier(service, prefs);
 });

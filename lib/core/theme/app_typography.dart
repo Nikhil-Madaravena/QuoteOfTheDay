@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 class AppTypography {
   AppTypography._();
 
-  /// Primary monospaced font for headlines and quotes
+  /// Serif display font for quotes and headlines
   static TextStyle playfair({
     double fontSize = 24,
     FontWeight fontWeight = FontWeight.w700,
@@ -22,7 +22,7 @@ class AppTypography {
         fontStyle: fontStyle,
       );
 
-  /// Secondary monospaced font for UI elements
+  /// Monospace sans-serif for UI labels and body text
   static TextStyle dmSans({
     double fontSize = 14,
     FontWeight fontWeight = FontWeight.w400,
